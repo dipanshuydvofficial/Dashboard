@@ -16,7 +16,7 @@ export default function App() {
   }
 
   if (!user || !profile) {
-    return <AuthView onLogin={loginWithGoogle} />;
+    return <AuthView onGoogleLogin={loginWithGoogle} onEmailLogin={loginWithEmail} />;
   }
 
   return (

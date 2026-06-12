@@ -53,3 +53,20 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
 }
+
+export async function createSecondaryUser(email: string, password: string) {
+  let secondaryApp;
+  try {
+    secondaryApp = initializeApp(firebaseConfig, 'SecondaryApp-' + Date.now());
+    const secondaryAuth = getAuth(secondaryApp);
+    const userCredential = await import('firebase/auth').then(m => m.createUserWithEmailAndPassword(secondaryAuth, email, password));
+    const uid = userCredential.user.uid;
+    return uid;
+  } catch (error) {
+    throw error;
+  } finally {
+    if (secondaryApp) {
+      import('firebase/app').then(m => m.deleteApp(secondaryApp as any)).catch(() => {});
+    }
+  }
+}

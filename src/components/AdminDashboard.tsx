@@ -3,6 +3,7 @@ import { collection, query, onSnapshot } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../lib/firebase';
 import { UserProfile } from '../types';
 import { DashboardItems } from './DashboardItems';
+import { AddUserForm } from './AddUserForm';
 import { Users, LayoutList } from 'lucide-react';
 
 export function AdminDashboard({ profile }: { profile: UserProfile }) {
@@ -55,30 +56,34 @@ export function AdminDashboard({ profile }: { profile: UserProfile }) {
       {activeTab === 'items' ? (
         <DashboardItems profile={profile} />
       ) : (
-        <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
-            <h3 className="font-semibold text-slate-800">System Users</h3>
-            <span className="text-sm font-medium text-slate-500 bg-white px-2.5 py-1 rounded-full border border-slate-200 shadow-sm">
-              {users.length} {users.length === 1 ? 'user' : 'users'}
-            </span>
+        <div className="space-y-8">
+          <AddUserForm />
+          
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="px-6 py-4 border-b border-slate-200 bg-slate-50 flex items-center justify-between">
+              <h3 className="font-semibold text-slate-800">System Users</h3>
+              <span className="text-sm font-medium text-slate-500 bg-white px-2.5 py-1 rounded-full border border-slate-200 shadow-sm">
+                {users.length} {users.length === 1 ? 'user' : 'users'}
+              </span>
+            </div>
+            <ul className="divide-y divide-slate-100">
+              {users.map((u) => (
+                <li key={u.id} className="p-6 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                  <div>
+                    <h4 className="text-slate-900 font-medium">{u.email}</h4>
+                    <p className="text-slate-500 text-sm mt-1 font-mono">{u.id}</p>
+                  </div>
+                  <div>
+                    <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${
+                      u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-700'
+                    }`}>
+                      {u.role.toUpperCase()}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
           </div>
-          <ul className="divide-y divide-slate-100">
-            {users.map((u) => (
-              <li key={u.id} className="p-6 flex items-center justify-between hover:bg-slate-50 transition-colors">
-                <div>
-                  <h4 className="text-slate-900 font-medium">{u.email}</h4>
-                  <p className="text-slate-500 text-sm mt-1 font-mono">{u.id}</p>
-                </div>
-                <div>
-                  <span className={`px-2.5 py-1 text-xs font-semibold rounded-full ${
-                    u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-700'
-                  }`}>
-                    {u.role.toUpperCase()}
-                  </span>
-                </div>
-              </li>
-            ))}
-          </ul>
         </div>
       )}
     </div>

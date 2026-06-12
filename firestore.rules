@@ -11,7 +11,7 @@ service cloud.firestore {
     
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
-    function isSignedIn() { return request.auth != null && request.auth.token.email_verified == true; }
+    function isSignedIn() { return request.auth != null; }
     
     function isRootAdmin() {
       // The application developer using AI studio is root admin
@@ -46,10 +46,12 @@ service cloud.firestore {
       allow list: if isSignedIn() && isAdmin();
       
       allow create: if isSignedIn() && isValidId(userId) && 
-                    userId == request.auth.uid &&
                     isValidUserConfig() &&
-                    incoming().email == request.auth.token.email &&
-                    ((incoming().role == 'admin' && isRootAdmin()) || incoming().role == 'user');
+                    (
+                      (userId == request.auth.uid && incoming().email == request.auth.token.email && ((incoming().role == 'admin' && isRootAdmin()) || incoming().role == 'user'))
+                      ||
+                      (isAdmin() && (incoming().role == 'user' || incoming().role == 'admin'))
+                    );
                     
       allow update: if isSignedIn() && isValidId(userId) && (
                       (userId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['email']) && incoming().email is string && incoming().email.size() <= 200) ||

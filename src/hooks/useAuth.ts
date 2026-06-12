@@ -51,9 +51,14 @@ export function useAuth() {
     await signInWithPopup(auth, provider);
   };
 
+  const loginWithEmail = async (email: string, password: string) => {
+    const { signInWithEmailAndPassword } = await import('firebase/auth');
+    await signInWithEmailAndPassword(auth, email, password);
+  };
+
   const logout = async () => {
     await signOut(auth);
   };
 
-  return { user, profile, loading, loginWithGoogle, logout };
+  return { user, profile, loading, loginWithGoogle, loginWithEmail, logout };
 }
