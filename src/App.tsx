@@ -5,7 +5,7 @@ import { UserDashboard } from './components/UserDashboard';
 import { AuthView } from './components/AuthView';
 
 export default function App() {
-  const { user, profile, loading, loginWithGoogle, logout } = useAuth();
+  const { user, profile, loading, loginWithGoogle, loginWithEmail, logout } = useAuth();
 
   if (loading) {
     return (
