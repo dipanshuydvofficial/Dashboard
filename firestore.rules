@@ -1,0 +1,90 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isSignedIn() { return request.auth != null && request.auth.token.email_verified == true; }
+    
+    function isRootAdmin() {
+      // The application developer using AI studio is root admin
+      return isSignedIn() && request.auth.token.email == 'd10653686@gmail.com';
+    }
+    
+    function isAdmin() {
+      return isRootAdmin() || (isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin');
+    }
+    
+    function isValidUserConfig() {
+      return incoming().keys().hasAll(['email', 'role', 'createdAt']) &&
+             incoming().keys().size() == 3 &&
+             incoming().email is string && incoming().email.size() <= 200 &&
+             incoming().role is string && (incoming().role == 'user' || incoming().role == 'admin') &&
+             incoming().createdAt == request.time;
+    }
+    
+    function isValidItemConfig() {
+      return incoming().keys().hasAll(['title', 'description', 'status', 'ownerId', 'createdAt', 'updatedAt']) &&
+             incoming().keys().size() == 6 &&
+             incoming().title is string && incoming().title.size() <= 100 &&
+             incoming().description is string && incoming().description.size() <= 1000 &&
+             incoming().status is string && (incoming().status == 'pending' || incoming().status == 'in-progress' || incoming().status == 'completed') &&
+             incoming().ownerId is string && incoming().ownerId.size() <= 128 &&
+             incoming().createdAt is timestamp &&
+             incoming().updatedAt is timestamp;
+    }
+
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (request.auth.uid == userId || isAdmin());
+      allow list: if isSignedIn() && isAdmin();
+      
+      allow create: if isSignedIn() && isValidId(userId) && 
+                    userId == request.auth.uid &&
+                    isValidUserConfig() &&
+                    incoming().email == request.auth.token.email &&
+                    ((incoming().role == 'admin' && isRootAdmin()) || incoming().role == 'user');
+                    
+      allow update: if isSignedIn() && isValidId(userId) && (
+                      (userId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['email']) && incoming().email is string && incoming().email.size() <= 200) ||
+                      (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['role']) && incoming().role is string && (incoming().role == 'user' || incoming().role == 'admin'))
+                    );
+    }
+    
+    match /items/{itemId} {
+      allow get: if isSignedIn() && isValidId(itemId) && (existing().ownerId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn() && (resource.data.ownerId == request.auth.uid || isAdmin());
+      
+      allow create: if isSignedIn() && isValidId(itemId) &&
+                    isValidItemConfig() &&
+                    incoming().ownerId == request.auth.uid &&
+                    incoming().createdAt == request.time &&
+                    incoming().updatedAt == request.time &&
+                    exists(/databases/$(database)/documents/users/$(request.auth.uid));
+                    
+      allow update: if isSignedIn() && isValidId(itemId) &&
+                    incoming().updatedAt == request.time &&
+                    incoming().createdAt == existing().createdAt &&
+                    incoming().ownerId == existing().ownerId &&
+                    (
+                      (existing().ownerId == request.auth.uid && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'status', 'updatedAt']) &&
+                       incoming().title is string && incoming().title.size() <= 100 &&
+                       incoming().description is string && incoming().description.size() <= 1000 &&
+                       incoming().status is string && (incoming().status == 'pending' || incoming().status == 'in-progress' || incoming().status == 'completed')
+                      ) ||
+                      (isAdmin() && incoming().diff(existing()).affectedKeys().hasOnly(['title', 'description', 'status', 'updatedAt']) &&
+                       incoming().title is string && incoming().title.size() <= 100 &&
+                       incoming().description is string && incoming().description.size() <= 1000 &&
+                       incoming().status is string && (incoming().status == 'pending' || incoming().status == 'in-progress' || incoming().status == 'completed'))
+                    );
+      
+      allow delete: if isSignedIn() && isValidId(itemId) && (existing().ownerId == request.auth.uid || isAdmin());
+    }
+  }
+}
